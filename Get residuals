@@ -1,0 +1,49 @@
+clear all
+close all
+clc
+% 
+%cd('A:\Lanlan\CUB\GB\analyses\good_data')
+rating = importdata('50x12tarMean.txt');
+
+subID=rating(:,1);
+tarGender=rating(:,2);
+subVAS=rating(:,3);
+PSPI=rating(:,4);
+tarVAS=rating(:,5);
+subGender=rating(:,6);
+
+nsub=length(subVAS)/12;
+sub_subGender=zeros(nsub,1); 
+for sub_index=1:nsub;
+ sub_start=1+12*(sub_index-1);
+ sub_tarVAS{sub_index}=tarVAS(sub_start:sub_start+11);
+ sub_PSPI{sub_index}=PSPI(sub_start:sub_start+11);
+ sub_tarGender{sub_index}=tarGender(sub_start:sub_start+11);
+ sub_subVAS{sub_index}=subVAS(sub_start:sub_start+11);
+ sub_subGender(sub_index,:)=subGender(sub_start+1);
+end
+
+for i=1:nsub
+    PSPI_targender{i}=[sub_PSPI{i} sub_tarGender{i}];
+    tarVAS_targender{i}=[sub_tarVAS{i} sub_tarGender{i}];
+    %   PSPI_tarVAS_targender{i}=[sub_PSPI{i} sub_tarVAS{i} sub_tarGender{i}];
+    [b dev st]=glmfit([sub_PSPI{i} sub_tarVAS{i}],sub_subVAS{i});
+    resid{i}=st.resid; %sub_subVAS controlling for PSPI and tarVAS
+    
+end
+
+stats=glmfit_multilevel(sub_subVAS, sub_tarGender, [],'names', {'Intcpt', 'tarGender'}, 'weighted')
+stats=glmfit_multilevel(resid, sub_tarGender, [],'names', {'Intcpt', 'tarGender'}, 'weighted','plots')
+
+%% get within subject STE for plotting
+
+for i=1:length(resid)
+   toPlotGendPos(i,:)=sub_subVAS{i}(sub_tarGender{i}==1)';
+   toPlotGendNeg(i,:)=sub_subVAS{i}(sub_tarGender{i}==-1)';
+end
+
+
+within_ste_PosPos=barplot_get_within_ste(toPlotGendPos(sub_subGender==1,:)); % I coded female as -1, male as 1.
+within_ste_PosNeg=barplot_get_within_ste(toPlotGendPos(sub_subGender==-1,:));
+within_ste_NegPos=barplot_get_within_ste(toPlotGendNeg(sub_subGender==1,:));
+within_ste_NegNeg=barplot_get_within_ste(toPlotGendNeg(sub_subGender==-1,:)); 
